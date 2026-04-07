@@ -27,13 +27,9 @@ jobs:
     - name: Run generation script
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        # GitHub SecretsにGMAIL_CREDENTIALSとしてJSONの中身を保存しておきます
-        GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS }}
+        GMAIL_TOKEN_JSON: ${{ secrets.GMAIL_TOKEN }}
       run: |
-        # Secretsから一時的なcredentials.jsonを作成
-        echo "$GMAIL_CREDENTIALS_JSON" > credentials.json
-        # 実際にはサーバー上での認証(token.json)が必要ですが、
-        # 初期認証をローカルで済ませてtoken.jsonもSecretsに入れる運用が一般的です。
+        echo "$GMAIL_TOKEN_JSON" > token.json
         python scripts/generate.py
 
     - name: Commit and push changes
