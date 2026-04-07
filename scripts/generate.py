@@ -11,7 +11,9 @@ from googleapiclient.discovery import build
 from dotenv import load_dotenv
 
 # .envファイルから設定（APIキーなど）を読み込みます
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BRIEFINGS_DIR = os.path.join(BASE_DIR, 'briefings')
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Gemini APIの最新クライアント設定
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -22,17 +24,18 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 def get_gmail_service():
     """Gmail APIに接続するための認証処理を行います"""
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    token_path = os.path.join(BASE_DIR, 'token.json')
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
     
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            creds_path = os.getenv("GMAIL_CREDENTIALS_PATH", "credentials.json")
+            creds_path = os.getenv("GMAIL_CREDENTIALS_PATH", os.path.join(BASE_DIR, "credentials.json"))
             flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
+        with open(token_path, 'w') as token:
             token.write(creds.to_json())
             
     return build('gmail', 'v1', credentials=creds)
@@ -215,14 +218,13 @@ def generate_html(date_str, data):
     </body>
     </html>
     '''
-    file_path = f"briefings/{date_str}.html"
-    with open(f"/Users/yuto/daily-briefing/{file_path}", "w", encoding="utf-8") as f:
+    file_path = os.path.join(BRIEFINGS_DIR, f"{date_str}.html")
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(template)
 
 def update_index():
     """過去7日分のHTMLを探して、トップページを更新します"""
-    briefing_dir = "/Users/yuto/daily-briefing/briefings"
-    files = sorted([f for f in os.listdir(briefing_dir) if f.endswith(".html")], reverse=True)[:7]
+    files = sorted([f for f in os.listdir(BRIEFINGS_DIR) if f.endswith(".html")], reverse=True)[:7]
     
     tab_buttons = []
     tab_contents = []
@@ -266,7 +268,7 @@ def update_index():
     </body>
     </html>
     '''
-    with open("/Users/yuto/daily-briefing/index.html", "w", encoding="utf-8") as f:
+    with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(index_html)
 
 if __name__ == "__main__":
