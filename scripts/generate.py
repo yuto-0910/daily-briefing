@@ -1,7 +1,7 @@
 import os
 import datetime
 import json
-import google.generativeai as genai
+from google import genai
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -11,8 +11,9 @@ from dotenv import load_dotenv
 # .envファイルから設定（APIキーなど）を読み込みます
 load_dotenv()
 
-# Gemini APIの初期設定
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Gemini APIの最新クライアント設定 (google-genai SDKを使用)
+# APIキーは環境変数 GEMINI_API_KEY から取得して渡します
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Gmail APIの利用範囲（読み取り専用）を設定
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
@@ -20,20 +21,16 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 def get_gmail_service():
     """Gmail APIに接続するための認証処理を行います"""
     creds = None
-    # すでに認証済みの場合は token.json を利用します
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
     
-    # 認証が必要な場合、または期限切れの場合は再認証します
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # credentials.json（Google Cloud Consoleからダウンロードしたもの）が必要です
             creds_path = os.getenv("GMAIL_CREDENTIALS_PATH", "credentials.json")
             flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        # 次回のために認証情報を保存します
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
             
@@ -67,10 +64,7 @@ def fetch_emails(service):
     return email_data
 
 def summarize_emails(emails):
-    """Gemini APIを使って、メールを重要度とニュースに分類・要約します"""
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    # AIへの指示書（プロンプト）です。JSON形式で出力するように指定しています。
+    """Gemini 2.5 Flash を使って、メールを重要度とニュースに分類・要約します"""
     prompt = f"""
     以下のメールリストを分析し、JSON形式のみで結果を返してください。
     
@@ -93,9 +87,15 @@ def summarize_emails(emails):
     }}
     """
     
-    response = model.generate_content(prompt)
-    text = response.text.strip()
-    # Markdownのコードブロック（```json ... ```）を剥ぎ取ります
+    # 指定された形式でのGemini呼び出し
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
+    result = response.text
+    
+    # JSONとして解析するために、Markdownの装飾（```json ... ```）を剥ぎ取ります
+    text = result.strip()
     if text.startswith("```json"):
         text = text[7:-3].strip()
     return json.loads(text)
@@ -144,7 +144,6 @@ def generate_html(date_str, data):
     </html>
     '''
     file_path = f"briefings/{date_str}.html"
-    # briefingsフォルダに保存します
     with open(f"/Users/yuto/daily-briefing/{file_path}", "w", encoding="utf-8") as f:
         f.write(template)
 
@@ -199,7 +198,6 @@ def update_index():
         f.write(index_html)
 
 if __name__ == "__main__":
-    # スクリプトを実行した際のメイン処理
     try:
         service = get_gmail_service()
         emails = fetch_emails(service)

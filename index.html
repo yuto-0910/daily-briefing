@@ -1,21 +1,33 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Briefing Dashboard</title>
-    <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #eee; margin: 0; }
-        .welcome { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: #007bff; }
-        p { color: #666; }
-    </style>
-</head>
-<body>
-    <div class="welcome">
-        <h1>Welcome to Daily Briefing</h1>
-        <p>まだブリーフィングが作成されていません。</p>
-        <p><code>scripts/generate.py</code> を実行して、最初のレポートを作成してください。</p>
-    </div>
-</body>
-</html>
+
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Daily Briefing Dashboard</title>
+        <style>
+            body { font-family: sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background: #eee; }
+            .tabs { background: #333; overflow-x: auto; white-space: nowrap; padding: 10px; display: flex; gap: 8px; }
+            .tab-btn { background: #555; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 6px; transition: 0.3s; }
+            .tab-btn.active { background: #007bff; font-weight: bold; }
+            .tab-content { display: none; flex-grow: 1; }
+            .tab-content.active { display: block; }
+            iframe { border: none; width: 100%; height: 100%; background: white; }
+        </style>
+        <script>
+            function showTab(id, btn) {
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+                btn.classList.add('active');
+            }
+        </script>
+    </head>
+    <body>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('tab-2026-04-06', this)">2026-04-06</button>
+        </div>
+        <div id="tab-2026-04-06" class="tab-content active"><iframe src="briefings/2026-04-06.html" width="100%" height="800px"></iframe></div>
+    </body>
+    </html>
+    
