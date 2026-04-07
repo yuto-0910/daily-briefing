@@ -1,7 +1,9 @@
 import os
 import datetime
 import json
+import re
 from google import genai
+from google.genai import types
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -11,8 +13,7 @@ from dotenv import load_dotenv
 # .envファイルから設定（APIキーなど）を読み込みます
 load_dotenv()
 
-# Gemini APIの最新クライアント設定 (google-genai SDKを使用)
-# APIキーは環境変数 GEMINI_API_KEY から取得して渡します
+# Gemini APIの最新クライアント設定
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Gmail APIの利用範囲（読み取り専用）を設定
@@ -37,7 +38,7 @@ def get_gmail_service():
     return build('gmail', 'v1', credentials=creds)
 
 def fetch_emails(service):
-    """昨日のメールを取得して、件名と本文の冒頭をリストにします"""
+    """昨日のメールを取得して、件名・本文・URLを抽出します"""
     yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y/%m/%d')
     today = datetime.date.today().strftime('%Y/%m/%d')
     query = f'after:{yesterday} before:{today}'
@@ -58,23 +59,43 @@ def fetch_emails(service):
             if h['name'] == 'From':
                 sender = h['value']
         
-        snippet = m.get('snippet', '')[:200]
-        email_data.append({"subject": subject, "sender": sender, "snippet": snippet})
+        snippet = m.get('snippet', '')
+        
+        # URLの抽出（フィルタリング条件維持）
+        raw_urls = re.findall(r'https://[^\s<>"]+', snippet)
+        filtered_urls = []
+        exclude_patterns = ['github.io', 'google.com/url', 'mail.google.com', 'unsubscribe', 'optout', 'opt-out', 'privacy-policy', 'delivery-preferences']
+        for url in raw_urls:
+            if not any(pattern in url.lower() for pattern in exclude_patterns):
+                filtered_urls.append(url)
+        
+        email_data.append({
+            "subject": subject, 
+            "sender": sender, 
+            "snippet": snippet,
+            "urls": filtered_urls
+        })
     
     return email_data
 
 def summarize_emails(emails):
-    """Gemini 2.5 Flash を使って、メールを重要度とニュースに分類・要約します"""
+    """Gemini 2.5 Flash と Google 検索グラウンディングで分析・要約します"""
     prompt = f"""
-    以下のメールリストを分析し、JSON形式のみで結果を返してください。
+    以下のメールリストを分析し、指定されたJSON形式のみで結果を返してください。
     
-    分析対象メール:
+    指示:
+    - 各記事タイトルについて、Google検索でその記事の個別ページURLを必ず探し出してください。
+    - メール本文から抽出したURLはトラッキング用のため最終出力には使用しないでください。
+    - Google検索で見つかった「実際の記事個別ページのURL」を使用してください。見つからない場合はnullにしてください。
+    - メールに含まれる記事は省略せずすべて抽出してください。
+    - InstagramやLINEなどSNS通知・マーケティングメール・広告メールは除外してください。
+    - ニュースサイト・ブログ・メディアからのメールの記事はすべて漏れなくリストアップしてください。
+    - 各ニュースに対し、検索結果に基づいた箇条書き5点の要約を作成（日本語）。
+    - 各ニュースのソース名（Nikkei, Forbes等）を自動判別してください。
+    - 複数ソースで言及されている注目ニュースは「is_hot: true」に設定してください。
+
+    分析対象データ:
     {json.dumps(emails, ensure_ascii=False)}
-    
-    要件:
-    1. 「重要メール」: 請求書、返信が必要な個人宛、システムアラートを抽出。
-    2. 「ニュースメール」: メルマガ等から記事タイトル一覧を作成。
-    3. 重複しているニュースは「is_hot: true」に設定してください。
     
     出力形式:
     {{
@@ -82,26 +103,76 @@ def summarize_emails(emails):
         {{"subject": "...", "sender": "...", "summary": "...", "priority": "High/Medium/Low"}}
       ],
       "news": [
-        {{"source": "...", "title": "...", "is_hot": true}}
+        {{
+          "title": "記事タイトル",
+          "url": "実際の記事URL or null",
+          "source": "ソース名",
+          "is_hot": true/false,
+          "summary": ["要点1", "要点2", "要点3", "要点4", "要点5"]
+        }}
       ]
     }}
     """
     
-    # 指定された形式でのGemini呼び出し
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            tools=[types.Tool(google_search=types.GoogleSearch())]
+        )
     )
     result = response.text
     
-    # JSONとして解析するために、Markdownの装飾（```json ... ```）を剥ぎ取ります
     text = result.strip()
-    if text.startswith("```json"):
-        text = text[7:-3].strip()
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    
     return json.loads(text)
 
 def generate_html(date_str, data):
-    """分析結果をもとに、きれいなレポートHTMLを作成します"""
+    """分析結果をHTMLに書き出します"""
+    
+    important_html = ""
+    for e in data.get("important", []):
+        important_html += f'''
+        <div class="email-item">
+            <strong>{e["subject"]}</strong> 
+            <span class="tag tag-{e["priority"].lower()}">{e["priority"]}</span><br>
+            <small>{e["sender"]}</small>
+            <p>{e["summary"]}</p>
+        </div>'''
+
+    # ホットニュースセクション（箇条書き要約を追加）
+    hot_news_html = ""
+    for n in data.get("news", []):
+        if n.get("is_hot"):
+            summary_points = "".join([f'<li>{p}</li>' for p in n.get("summary", [])])
+            link_html = f'<a href="{n["url"]}" target="_blank">{n["title"]}</a>' if n.get("url") else n["title"]
+            
+            hot_news_html += f'''
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【{n["source"]}】 <strong>{link_html}</strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    {summary_points}
+                </ul>
+            </div>'''
+
+    # 通常ニュース一覧
+    news_list_html = ""
+    for n in data.get("news", []):
+        if not n.get("is_hot"):
+            summary_points = "".join([f'<li>{p}</li>' for p in n.get("summary", [])])
+            title_html = f'<a href="{n["url"]}" target="_blank" style="font-weight: bold; font-size: 1.1rem; text-decoration: none; color: #007bff;">{n["title"]}</a>' if n.get("url") else f'<span style="font-weight: bold; font-size: 1.1rem; color: #333;">{n["title"]}</span>'
+            
+            news_list_html += f'''
+            <div class="email-item">
+                <span class="source-badge">[{n["source"]}]</span> 
+                {title_html}
+                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                    {summary_points}
+                </ul>
+            </div>'''
+
     template = f'''
     <!DOCTYPE html>
     <html lang="ja">
@@ -113,14 +184,15 @@ def generate_html(date_str, data):
             body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
             .section {{ background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; }}
             h2 {{ border-left: 4px solid #007bff; padding-left: 12px; color: #007bff; font-size: 1.25rem; margin-top: 0; }}
-            .email-item {{ border-bottom: 1px solid #eee; padding: 12px 0; }}
+            .email-item {{ border-bottom: 1px solid #eee; padding: 16px 0; }}
             .email-item:last-child {{ border-bottom: none; }}
             .tag {{ display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-left: 8px; vertical-align: middle; }}
             .tag-high {{ background-color: #fee2e2; color: #dc2626; }}
             .tag-medium {{ background-color: #fef3c7; color: #d97706; }}
             .tag-low {{ background-color: #dcfce7; color: #16a34a; }}
-            .hot-news {{ background-color: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 6px; color: #92400e; font-weight: bold; margin-bottom: 8px; }}
-            .source {{ color: #6b7280; font-size: 0.85rem; font-weight: normal; }}
+            .source-badge {{ background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }}
+            .hot-news {{ background-color: #fffbeb; border: 1px solid #fde68a; padding: 16px; border-radius: 8px; color: #92400e; margin-bottom: 12px; }}
+            .hot-news a {{ color: #92400e; text-decoration: underline; }}
         </style>
     </head>
     <body>
@@ -128,17 +200,17 @@ def generate_html(date_str, data):
         
         <div class="section">
             <h2>🚨 重要メール</h2>
-            {"".join([f'<div class="email-item"><strong>{e["subject"]}</strong> <span class="tag tag-{e["priority"].lower()}">{e["priority"]}</span><br><small>{e["sender"]}</small><p>{e["summary"]}</p></div>' for e in data.get("important", [])])}
+            {important_html}
         </div>
 
         <div class="section">
             <h2>🔥 ホットニュース</h2>
-            {"".join([f'<div class="hot-news">【{n["source"]}】 {n["title"]}</div>' for n in data.get("news", []) if n.get("is_hot")])}
+            {hot_news_html}
         </div>
 
         <div class="section">
-            <h2>📰 ニュース一覧</h2>
-            {"".join([f'<div class="email-item"><span class="source">[{n["source"]}]</span> {n["title"]}</div>' for n in data.get("news", []) if not n.get("is_hot")])}
+            <h2>📰 ニュース要約一覧</h2>
+            {news_list_html}
         </div>
     </body>
     </html>
@@ -206,7 +278,7 @@ if __name__ == "__main__":
             yesterday_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
             generate_html(yesterday_str, summary_data)
             update_index()
-            print(f"Success: Briefing for {yesterday_str} generated.")
+            print(f"Success: Briefing for {yesterday_str} generated with hot news summaries.")
         else:
             print("No emails found for yesterday.")
     except Exception as e:

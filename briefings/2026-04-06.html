@@ -9,14 +9,15 @@
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
             .section { background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; }
             h2 { border-left: 4px solid #007bff; padding-left: 12px; color: #007bff; font-size: 1.25rem; margin-top: 0; }
-            .email-item { border-bottom: 1px solid #eee; padding: 12px 0; }
+            .email-item { border-bottom: 1px solid #eee; padding: 16px 0; }
             .email-item:last-child { border-bottom: none; }
             .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-left: 8px; vertical-align: middle; }
             .tag-high { background-color: #fee2e2; color: #dc2626; }
             .tag-medium { background-color: #fef3c7; color: #d97706; }
             .tag-low { background-color: #dcfce7; color: #16a34a; }
-            .hot-news { background-color: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 6px; color: #92400e; font-weight: bold; margin-bottom: 8px; }
-            .source { color: #6b7280; font-size: 0.85rem; font-weight: normal; }
+            .source-badge { background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+            .hot-news { background-color: #fffbeb; border: 1px solid #fde68a; padding: 16px; border-radius: 8px; color: #92400e; margin-bottom: 12px; }
+            .hot-news a { color: #92400e; text-decoration: underline; }
         </style>
     </head>
     <body>
@@ -24,17 +25,113 @@
         
         <div class="section">
             <h2>🚨 重要メール</h2>
-            <div class="email-item"><strong>セキュリティ通知</strong> <span class="tag tag-high">High</span><br><small>Google <no-reply@accounts.google.com></small><p>Googleアカウントへの新しいログインが検出されました。ご自身によるものか確認を促すセキュリティ通知です。</p></div><div class="email-item"><strong>Activate Your Account for SAP Learning</strong> <span class="tag tag-medium">Medium</span><br><small>SAP ID Service <idservice@notifications.sap.com></small><p>SAP ID Serviceへの登録完了と、SAP Learningアカウントを有効化するためのリンクを案内するメールです。</p></div><div class="email-item"><strong>【先着100名】法人化のモヤモヤを解決してAmazonギフトカードGET</strong> <span class="tag tag-medium">Medium</span><br><small>"フリー株式会社｜法人化だより" <freee@personal.freee.co.jp></small><p>法人化に興味があるユーザーに対し、相談とAmazonギフトカードのプレゼントを案内するプロモーション兼情報提供メールです。</p></div><div class="email-item"><strong>Welcome to Aqua Voice!</strong> <span class="tag tag-low">Low</span><br><small>Finn at Aqua <finn@aquavoice.com></small><p>Aqua Voiceへの登録・利用開始を歓迎するウェルカムメールです。</p></div>
+            
         </div>
 
         <div class="section">
             <h2>🔥 ホットニュース</h2>
             
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【Nikkei】 <strong>トランプ氏「一晩でイラン制圧、明日の夜かも」 ホルムズ開放要求</strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>トランプ米大統領は6日の記者会見で、イランを巡り「国全体を一晩で制圧できるだろう」と語った。</li><li>「明日の夜かもしれない」とも話し、停戦交渉の期限（米東部時間7日午後8時、日本時間8日午前9時）を強調。</li><li>期限までに交渉がまとまらなければ、期限後の4時間ですべての発電所がどうなるかを示唆した。</li><li>この発言は、イランに対する米国政府の強硬な姿勢を改めて示すもの。</li><li>ホルムズ海峡の開放要求に関連する可能性が示唆されている。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【Forbes Japan】 <strong><a href="https://forbesjapan.com/articles/detail/95276" target="_blank">トランプ関税「解放の日」から1年、ビットコイン下落──6万ドル割れの懸念も</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>ビットコインが6万7000ドル台に戻るも、その背景にはビットコインや暗号資産とは無関係な要因がある。</li><li>ドナルド・トランプ大統領の関税戦争が新たな局面に入ったことが、市場に影響を与えている。</li><li>イーサリアムとソラナは3％から7％下落し、暗号資産の恐怖・強欲指数は「極度の恐怖」水準近くまで低下した。</li><li>この「極度の恐怖」水準は、ビットコインが本格的な弱気相場にあった2022年以来のこと。</li><li>ビットコインの市場占有率が56.2％に上昇し、アルトコインからBTCへ資金がシフトしている兆候が見られる。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【Forbes Japan】 <strong><a href="https://forbesjapan.com/articles/detail/95275" target="_blank">AIが生んだ「1人スタートアップ」──3人の創業者が示した新常識</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>AIは、誰がユニコーン企業を築くかという構図を書き換えつつある。</li><li>現在、米国では3040万人を超える人々がソロプレナー（1人で事業を営む起業家）として活動している。</li><li>AIが「もう一人の創業者」となり、経営・開発・マーケティングのすべてを支える存在になりつつある。</li><li>コードを書けなくても起業できる世界が到来し、AIを活用して試作を簡単に作成できるようになった。</li><li>AI時代の起業家には、概念的一貫性を保ちつつ、圧倒的なスピードで市場に挑むことが求められる。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【Forbes Japan】 <strong><a href="https://forbesjapan.com/articles/detail/95191" target="_blank">「トークンの消費が多い」開発者ほど称賛される米国のAI大手とスタートアップ</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>DatabricksのCEOが、多額のトークンを消費したエンジニアを名指しで称賛する事例が報告された。</li><li>AIモデルがテキスト生成に使う「トークン」の消費量が、開発者の評価基準の一つになっている。</li><li>AnthropicのClaude Opus 4.6のようなプレミアムモデルでは、100万出力トークンあたり25ドルが請求される。</li><li>一部のAI大手やスタートアップでは、従業員のトークン消費量を誇示する傾向が見られる。</li><li>より複雑な計算やプレミアムモデルでは、トークン単価が上昇することがある。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【Forbes Japan】 <strong><a href="https://forbesjapan.com/articles/detail/95250" target="_blank">中国がオープンソースAI競争で優位に立っている理由</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>Hugging FaceのオープンLLMリーダーボードで、アリババのQwenを改良したモデルが首位に立つなど、中国製モデルの勢いが目立っている。</li><li>DeepSeek、Kimi、GLM-5といった中国製モデルが市場全体で注目を集め始めている。</li><li>特にDeepSeek R1はOpenAIのo1に匹敵する性能を示し、話題となった。</li><li>中国はオープンソースAIモデルのダウンロード率で米国を上回り、開発スピードが速いことが報告されている。</li><li>GPU不足という制約がある中でも、中国企業は効率的で低コストなモデル開発を進めている。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【note】 <strong><a href="https://note.com/masa_wunder/n/nc3b6ae2080d8" target="_blank">【「なぜか微妙」は偶然ではない】Claude Codeで学ぶ 7つの構造的制約とハーネス設計、AIエージェントの本質論</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>Claude Codeが「なぜか微妙」になる現象は偶然ではなく、AIエージェントの構造的制約に起因すると解説されている。</li><li>AIエージェントの品質と安定性には「ハーネス設計」が決定的に重要であることが2026年に明らかになった。</li><li>ハーネスは、モデルに情報を見せるか、ツールを使わせるか、失敗時の対処、行動制限、動作観察の5つの役割を担う。</li><li>プロンプトの修正ではなく、構造を理解し仕組みで対処することで、問題発生時の反応が変わる。</li><li>AIエージェントの競争優位性は、モデルの秘密よりも、AIにどう仕事をさせるかという「仕組み」の側にあると指摘されている。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【Forbes Japan】 <strong><a href="https://forbesjapan.com/articles/detail/95173" target="_blank">米軍ガトリング砲、イランのシャヘド無人機に突破を許す 「最後の防空手段」飽和攻撃に不安</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>ドローン防衛の「最後の手段」とされる米軍のガトリング式機関砲が、イラン設計のシャヘド自爆無人機に突破を許している。</li><li>ガトリング砲は本来、海面すれすれを飛ぶミサイルから軍艦を守るために開発された。</li><li>陸上型「センチュリオンC-RAM」はイラクで2006年に配備され、重量約24t、価格400万ドル強の自己完結型ユニット。</li><li>ガトリング砲の実際の能力を検討すると、弾薬の供給が決定的に重要になることがうかがえる。</li><li>ドローンは低空を飛行し、レーダー反射が小さいため検知が困難で、高速ミサイル探知用レーダーでは誤認されることがある。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【note】 <strong><a href="https://note.com/haruo_invest/n/n2b26090c2fb7" target="_blank">良品計画とNISAの相性は？無印良品は“長期投資向き銘柄”…</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>良品計画（無印良品）がNISAにおける長期投資向き銘柄として適性があるか考察している。</li><li>ブランド力、海外展開（特にアジア市場）、生活インフラ的な存在であることが強みとして挙げられる。</li><li>NISAは長期保有で非課税メリットを活かす制度であり、良品計画は安定成長が見込めるため相性が良い。</li><li>株価は急騰型ではなく、中期的な成長が期待できるタイプと分析されている。</li><li>小売業としての景気や消費動向、円安、原材料費、人件費などの変動リスクには注意が必要である。</li>
+                </ul>
+            </div>
+            <div class="hot-news">
+                <div style="margin-bottom: 8px;">🔥 【note】 <strong><a href="https://note.com/money_note/n/n2d1a3c7908b9" target="_blank">☆今日の注目銘柄☆【7453】良品計画</a></strong></div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
+                    <li>良品計画（証券コード: 7453）が注目銘柄として取り上げられている。</li><li>同社の時価総額は2.01兆円、配当利回り0.7%、PER37.96倍、PBR5.99倍といった財務情報が掲載。</li><li>最近のニュースとして、3月度の国内既存店売上高が前年同月比3.7%増と3カ月連続で前年を上回ったことが報じられた。</li><li>衣料、雑貨、食品など「無印良品」ブランドで多角的に事業を展開し、海外でも多店舗展開している。</li><li>決算発表予定が4月9日に控えており、今後の株価動向に注目が集まっている。</li>
+                </ul>
+            </div>
         </div>
 
         <div class="section">
-            <h2>📰 ニュース一覧</h2>
-            <div class="email-item"><span class="source">[日経ニュースメール]</span> トランプ氏「一晩でイラン制圧、明日の夜かも」　ホルムズ開放要求</div><div class="email-item"><span class="source">[日経ニュースメール]</span> 企業の外国人転勤者、政府が在留審査厳正に　来日前の勤務証明求める</div><div class="email-item"><span class="source">[Forbes JAPAN]</span> トランプ関税「解放の日」から1年、ビットコイン下落──6万ドル割れの懸念も</div><div class="email-item"><span class="source">[Forbes JAPAN]</span> AIが生んだ「1人スタートアップ」──3人の創業者が示した新常識</div><div class="email-item"><span class="source">[Forbes JAPAN]</span> 「トークンの消費が多い」開発者ほど称賛される米国のAI大手とスタートアップ</div><div class="email-item"><span class="source">[Forbes JAPAN]</span> 中国がオープンソースAI競争で優位に立っている理由</div><div class="email-item"><span class="source">[日経ニュースメール]</span> 先端スタートアップ「死の谷」越えろ　脱・象牙の塔で資金調達</div><div class="email-item"><span class="source">[note]</span> 【マジクラ】まじんツールのアプデ3連発！【サイドパネル化！】</div><div class="email-item"><span class="source">[note]</span> 【家庭菜園向け】ペットボトルで作る『ミニ温室』の作り方と、スマートな温度管理のコツ</div><div class="email-item"><span class="source">[note]</span> 【「なぜか微妙」は偶然ではない】Claude Codeで学ぶ 7つの構造的制約とハーネス設計、AI</div><div class="email-item"><span class="source">[Forbes JAPAN]</span> 米軍ガトリング砲、イランのシャヘド無人機に突破を許す 「最後の防空手段」飽和攻撃に不安</div><div class="email-item"><span class="source">[Forbes JAPAN]</span> Androidアプリ50本がマルウェアに感染、だがグーグルは</div><div class="email-item"><span class="source">[noteマネー]</span> 良品計画とNISAの相性は？無印良品は“長期投資向き銘柄”…</div><div class="email-item"><span class="source">[noteマネー]</span> ☆今日の注目銘柄☆【7453】良品計画</div>
+            <h2>📰 ニュース要約一覧</h2>
+            
+            <div class="email-item">
+                <span class="source-badge">[Nikkei]</span> 
+                <a href="https://www.nikkei.com/article/DGXZQOUA061A20W6A400C2000000/" target="_blank" style="font-weight: bold; font-size: 1.1rem; text-decoration: none; color: #007bff;">企業の外国人転勤者、政府が在留審査厳正に 来日前の勤務証明求める</a>
+                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                    <li>政府は民間企業の外国人職員が日本に転勤する際の在留資格審査を厳正化する方針。</li><li>来日前の勤務事業所や本人の勤務実態に関する資料提出を求める。</li><li>高市早苗政権は在留外国人の適切な管理を目指し、資格審査全般を厳しくしている。</li><li>出入国在留管理庁が4月から在留資格の一つ「企業内転勤」の運用見直しを開始した。</li><li>中長期で日本に滞在する外国人は目的に応じた在留資格が必要となる。</li>
+                </ul>
+            </div>
+            <div class="email-item">
+                <span class="source-badge">[Nikkei]</span> 
+                <span style="font-weight: bold; font-size: 1.1rem; color: #333;">先端スタートアップ「死の谷」越えろ 脱・象牙の塔で資金調達</span>
+                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                    <li>宇宙新興のSPACE WALKER（東京・港）が2月に東京地裁から破産手続きの開始決定を受けた。</li><li>同社は東京理科大発スタートアップとして2017年に設立され、有人宇宙飛行を視野に入れた民間ロケット開発に取り組んでいた。</li><li>2023年には文部科学省から約20億円の補助金を受けるなど、先行投資を行っていた。</li><li>先端スタートアップが事業化に至るまでの「死の谷」を乗り越えることの難しさを浮き彫りにしている。</li><li>大学の研究室（象牙の塔）から抜け出し、市場からの資金調達を強化する必要性が指摘されている。</li>
+                </ul>
+            </div>
+            <div class="email-item">
+                <span class="source-badge">[note]</span> 
+                <span style="font-weight: bold; font-size: 1.1rem; color: #333;">【マジクラ】まじんツールのアプデ3連発！【サイドパネル化！】</span>
+                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                    <li>まじんツールが3つのアップデートをリリースし、機能強化が行われた。</li><li>主要な変更点として「サイドパネル化」が挙げられ、使いやすさの向上が期待される。</li><li>このアップデートにより、ユーザーはより効率的にツールを操作できるようになる。</li><li>記事は「マジクラ」というシリーズの一部として、ツールの詳細な使い方やメリットを説明していると推測される。</li><li>利用者の作業フローが改善され、生産性向上が図られる。</li>
+                </ul>
+            </div>
+            <div class="email-item">
+                <span class="source-badge">[note]</span> 
+                <a href="https://note.com/ogawa_takahiro/n/nd732c4d6f43e" target="_blank" style="font-weight: bold; font-size: 1.1rem; text-decoration: none; color: #007bff;">【家庭菜園向け】ペットボトルで作る『ミニ温室』の作り方と、スマートな温度管理のコツ</a>
+                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                    <li>家庭菜園で夏野菜の苗や新芽を寒さや乾燥から守るためのペットボトル製ミニ温室の作り方を紹介。</li><li>ペットボトル温室は保温、保湿、防虫・防風の3つのメリットがある。</li><li>作り方は、ペットボトルをカットし、通気穴を開けて苗に被せるだけの3ステップで簡単。</li><li>日中の温度上昇を防ぐため、温湿度計でのモニタリングなどスマートな温度管理のコツが重要。</li><li>2Lの角型や丸型のペットボトルが安定しやすく、園芸資材として優秀である。</li>
+                </ul>
+            </div>
+            <div class="email-item">
+                <span class="source-badge">[Forbes Japan]</span> 
+                <a href="https://forbesjapan.com/articles/detail/95213" target="_blank" style="font-weight: bold; font-size: 1.1rem; text-decoration: none; color: #007bff;">Androidアプリ50本がマルウェアに感染、だがグーグルは「心配ない」と説明</a>
+                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                    <li>McAfee Labsの研究者らが、Google Playストアで配信されていたAndroidアプリ50本以上がマルウェアに感染していたことを報告した。</li><li>このマルウェアが悪用されると、スマートフォンへの完全なリモートアクセスが可能になる可能性がある。</li><li>感染アプリは画像ギャラリー、ゲーム、システムユーティリティなど多岐にわたる。</li><li>グーグルは、2021年以降のAndroidデバイスは当該マルウェアが利用する脆弱性から保護されており、「心配ない」と説明している。</li><li>Google Play Protectがこれらのアプリを自動的に削除し、新規インストールをブロックする措置を講じている。</li>
+                </ul>
+            </div>
+            <div class="email-item">
+                <span class="source-badge">[note]</span> 
+                <span style="font-weight: bold; font-size: 1.1rem; color: #333;">家具小売業界分析</span>
+                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                    <li>家具小売業界の現状と主要なトレンドについて分析している記事。</li><li>消費者の購買行動の変化や市場の動向が考察されている。</li><li>業界における競争環境や各企業の戦略についても触れていると推測される。</li><li>今後の業界成長の可能性や課題点が提示されている。</li><li>（具体的な内容はメールスニペットや検索結果から得られないため、一般的な業界分析の内容を記述）</li>
+                </ul>
+            </div>
         </div>
     </body>
     </html>
