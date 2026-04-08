@@ -1,7 +1,7 @@
 import os
-import datetime
 import json
 import re
+from datetime import datetime, timedelta, timezone
 from google import genai
 from google.genai import types
 from google.auth.transport.requests import Request
@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRIEFINGS_DIR = os.path.join(BASE_DIR, 'briefings')
 load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+JST = timezone(timedelta(hours=9))
 
 # Gemini APIの最新クライアント設定
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -41,10 +43,14 @@ def get_gmail_service():
     return build('gmail', 'v1', credentials=creds)
 
 def fetch_emails(service):
-    """昨日のメールを取得して、件名・本文・URLを抽出します"""
-    yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y/%m/%d')
-    today = datetime.date.today().strftime('%Y/%m/%d')
-    query = f'after:{yesterday} before:{today}'
+    """JST基準で昨日のメールを取得して、件名・本文・URL・受信日を抽出します"""
+    now_jst = datetime.now(JST)
+    yesterday_jst = now_jst - timedelta(days=1)
+    start = yesterday_jst.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = yesterday_jst.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    # Unixタイムスタンプを使用してJSTの1日分を正確に指定
+    query = f'after:{int(start.timestamp())} before:{int(end.timestamp())}'
     
     results = service.users().messages().list(userId='me', q=query).execute()
     messages = results.get('messages', [])
@@ -62,6 +68,10 @@ def fetch_emails(service):
             if h['name'] == 'From':
                 sender = h['value']
         
+        # 受信日時（JST）の取得
+        internal_date_ms = int(m.get('internalDate', 0))
+        email_date = datetime.fromtimestamp(internal_date_ms / 1000, JST).strftime('%Y-%m-%d')
+        
         snippet = m.get('snippet', '')
         
         # URLの抽出（フィルタリング条件維持）
@@ -76,7 +86,8 @@ def fetch_emails(service):
             "subject": subject, 
             "sender": sender, 
             "snippet": snippet,
-            "urls": filtered_urls
+            "urls": filtered_urls,
+            "date": email_date
         })
     
     return email_data
@@ -87,6 +98,7 @@ def summarize_emails(emails):
     以下のメールリストを分析し、指定されたJSON形式のみで結果を返してください。
     
     指示:
+    - 入力データには各メールの "subject" (件名) と "date" (受信日) が含まれています。
     - 各記事タイトルについて、Google検索でその記事の個別ページURLを必ず探し出してください。
     - メール本文から抽出したURLはトラッキング用のため最終出力には使用しないでください。
     - Google検索で見つかった「実際の記事個別ページのURL」を使用してください。見つからない場合はnullにしてください。
@@ -96,6 +108,7 @@ def summarize_emails(emails):
     - 各ニュースに対し、検索結果に基づいた箇条書き5点の要約を作成（日本語）。
     - 各ニュースのソース名（Nikkei, Forbes等）を自動判別してください。
     - 複数ソースで言及されている注目ニュースは「is_hot: true」に設定してください。
+    - 出力JSONの各ニュース項目に、エビデンスとして "email_date" (YYYY-MM-DD形式) と "email_subject" (メール件名) を必ず紐付けてください。
 
     分析対象データ:
     {json.dumps(emails, ensure_ascii=False)}
@@ -111,7 +124,9 @@ def summarize_emails(emails):
           "url": "実際の記事URL or null",
           "source": "ソース名",
           "is_hot": true/false,
-          "summary": ["要点1", "要点2", "要点3", "要点4", "要点5"]
+          "summary": ["要点1", "要点2", "要点3", "要点4", "要点5"],
+          "email_date": "2026-04-07",
+          "email_subject": "メールの件名"
         }}
       ]
     }}
@@ -145,16 +160,27 @@ def generate_html(date_str, data):
             <p>{e["summary"]}</p>
         </div>'''
 
-    # ホットニュースセクション（箇条書き要約を追加）
+    def format_evidence_date(date_str_iso):
+        """YYYY-MM-DD を YYYY年M月D日 に変換"""
+        try:
+            dt = datetime.strptime(date_str_iso, '%Y-%m-%d')
+            return dt.strftime('%Y年%m月%d日').replace('年0', '年').replace('月0', '月')
+        except:
+            return date_str_iso
+
+    # ホットニュースセクション
     hot_news_html = ""
     for n in data.get("news", []):
         if n.get("is_hot"):
             summary_points = "".join([f'<li>{p}</li>' for p in n.get("summary", [])])
             link_html = f'<a href="{n["url"]}" target="_blank">{n["title"]}</a>' if n.get("url") else n["title"]
+            display_date = format_evidence_date(n.get("email_date", ""))
+            evidence_html = f'<div style="font-size: 0.8rem; color: #92400e; margin-bottom: 4px; opacity: 0.8;">📧 {display_date}付・「{n.get("email_subject")}」より</div>'
             
             hot_news_html += f'''
             <div class="hot-news">
                 <div style="margin-bottom: 8px;">🔥 【{n["source"]}】 <strong>{link_html}</strong></div>
+                {evidence_html}
                 <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
                     {summary_points}
                 </ul>
@@ -166,11 +192,14 @@ def generate_html(date_str, data):
         if not n.get("is_hot"):
             summary_points = "".join([f'<li>{p}</li>' for p in n.get("summary", [])])
             title_html = f'<a href="{n["url"]}" target="_blank" style="font-weight: bold; font-size: 1.1rem; text-decoration: none; color: #007bff;">{n["title"]}</a>' if n.get("url") else f'<span style="font-weight: bold; font-size: 1.1rem; color: #333;">{n["title"]}</span>'
+            display_date = format_evidence_date(n.get("email_date", ""))
+            evidence_html = f'<div style="font-size: 0.8rem; color: #666; margin-bottom: 4px;">📧 {display_date}付・「{n.get("email_subject")}」より</div>'
             
             news_list_html += f'''
             <div class="email-item">
                 <span class="source-badge">[{n["source"]}]</span> 
                 {title_html}
+                {evidence_html}
                 <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
                     {summary_points}
                 </ul>
@@ -277,7 +306,8 @@ if __name__ == "__main__":
         emails = fetch_emails(service)
         if emails:
             summary_data = summarize_emails(emails)
-            yesterday_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+            yesterday_jst = datetime.now(JST) - timedelta(days=1)
+            yesterday_str = yesterday_jst.strftime('%Y-%m-%d')
             generate_html(yesterday_str, summary_data)
             update_index()
             print(f"Success: Briefing for {yesterday_str} generated with hot news summaries.")
