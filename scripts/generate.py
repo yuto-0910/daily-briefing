@@ -83,8 +83,9 @@ def fetch_emails(service):
                 filtered_urls.append(url)
         
         email_data.append({
-            "subject": subject, 
-            "sender": sender, 
+            "message_id": msg['id'],
+            "subject": subject,
+            "sender": sender,
             "snippet": snippet,
             "urls": filtered_urls,
             "date": email_date
@@ -93,45 +94,90 @@ def fetch_emails(service):
     return email_data
 
 def summarize_emails(emails):
-    """Gemini 2.5 Flash と Google 検索グラウンディングで分析・要約します"""
-    prompt = f"""
-    以下のメールリストを分析し、指定されたJSON形式のみで結果を返してください。
-    
-    指示:
-    - 入力データには各メールの "subject" (件名) と "date" (受信日) が含まれています。
-    - 各記事タイトルについて、Google検索でその記事の個別ページURLを必ず探し出してください。
-    - メール本文から抽出したURLはトラッキング用のため最終出力には使用しないでください。
-    - Google検索で見つかった「実際の記事個別ページのURL」を使用してください。見つからない場合はnullにしてください。
-    - メールに含まれる記事は省略せずすべて抽出してください。
-    - InstagramやLINEなどSNS通知・マーケティングメール・広告メールは除外してください。
-    - ニュースサイト・ブログ・メディアからのメールの記事はすべて漏れなくリストアップしてください。
-    - 各ニュースに対し、検索結果に基づいた箇条書き5点の要約を作成（日本語）。
-    - 各ニュースのソース名（Nikkei, Forbes等）を自動判別してください。
-    - 複数ソースで言及されている注目ニュースは「is_hot: true」に設定してください。
-    - 出力JSONの各ニュース項目に、エビデンスとして "email_date" (YYYY-MM-DD形式) と "email_subject" (メール件名) を必ず紐付けてください。
+    """Gemini 2.5 Flash でメールを3カテゴリに分類・要約する"""
 
-    分析対象データ:
-    {json.dumps(emails, ensure_ascii=False)}
-    
-    出力形式:
+    prompt = f"""
+以下のメールリストを分析し、指定されたJSON形式のみで返してください。
+前置き・説明文・コードブロック（```json等）は一切不要です。JSONのみを返してください。
+
+## 分類ルール
+
+### カテゴリ1: important（重要メール）
+以下のいずれかに該当するメールを分類する：
+- 宛名・本文にYuto、青木、Aoki等の個人名が含まれる
+- アラート・エラー・警告・障害・セキュリティ通知
+- インボイス・請求書・支払い・領収書・決済・クレジット関連
+- 期限・締め切り・リマインダー・要対応
+- 契約・申込・登録完了・解約通知
+
+### カテゴリ2: news（ニュース・メルマガ）
+以下のいずれかに該当するメールを分類する：
+- ニュースメディア・メルマガ・定期配信
+- 日経・Bloomberg・Forbes・Reuters・NewsPicks・WSJ等からの配信
+- テック・ビジネス・経済・投資関連の定期メール
+
+### カテゴリ3: other（その他）
+- 上記2カテゴリのいずれにも該当しないメール
+- マーケティングメール・広告・セール情報・SNS通知等
+
+## 各メールに必ず含める情報
+
+- `message_id`: メールのID（後でGmailリンク生成に使用）
+- `subject`: メールの件名（原文のまま変更しない）
+- `sender`: 送信者
+- `date`: メール受信日（YYYY-MM-DD形式）
+- `category`: "important" / "news" / "other" のいずれか
+- `summary`: メール内容の要点を日本語で3点の配列（各40字以内）
+
+## 絶対に守るルール
+
+- 全メールを漏れなくリストアップすること（件数を減らさない）
+- subjectは原文のまま（翻訳・省略・変更禁止）
+- dateは必ず前日日付（YYYY-MM-DD）と一致していること
+- summaryは必ず3点の配列にすること（2点・4点は禁止）
+- JSONのみを返すこと（他のテキスト一切不要）
+
+## 分析対象データ
+
+{json.dumps(emails, ensure_ascii=False)}
+
+## 出力形式
+
+{{
+  "date": "YYYY-MM-DD",
+  "important": [
     {{
-      "important": [
-        {{"subject": "...", "sender": "...", "summary": "...", "priority": "High/Medium/Low"}}
-      ],
-      "news": [
-        {{
-          "title": "記事タイトル",
-          "url": "実際の記事URL or null",
-          "source": "ソース名",
-          "is_hot": true/false,
-          "summary": ["要点1", "要点2", "要点3", "要点4", "要点5"],
-          "email_date": "2026-04-07",
-          "email_subject": "メールの件名"
-        }}
-      ]
+      "message_id": "メールID",
+      "subject": "件名（原文のまま）",
+      "sender": "送信者",
+      "date": "YYYY-MM-DD",
+      "category": "important",
+      "summary": ["要点1", "要点2", "要点3"]
     }}
-    """
-    
+  ],
+  "news": [
+    {{
+      "message_id": "メールID",
+      "subject": "件名（原文のまま）",
+      "sender": "送信者",
+      "date": "YYYY-MM-DD",
+      "category": "news",
+      "summary": ["要点1", "要点2", "要点3"]
+    }}
+  ],
+  "other": [
+    {{
+      "message_id": "メールID",
+      "subject": "件名（原文のまま）",
+      "sender": "送信者",
+      "date": "YYYY-MM-DD",
+      "category": "other",
+      "summary": ["要点1", "要点2", "要点3"]
+    }}
+  ]
+}}
+"""
+
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
@@ -139,114 +185,157 @@ def summarize_emails(emails):
             tools=[types.Tool(google_search=types.GoogleSearch())]
         )
     )
-    result = response.text
-    
-    text = result.strip()
+
+    text = response.text.strip()
     if "```json" in text:
         text = text.split("```json")[1].split("```")[0].strip()
-    
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+
     return json.loads(text)
 
 def generate_html(date_str, data):
-    """分析結果をHTMLに書き出します"""
-    
-    important_html = ""
-    for e in data.get("important", []):
-        important_html += f'''
-        <div class="email-item">
-            <strong>{e["subject"]}</strong> 
-            <span class="tag tag-{e["priority"].lower()}">{e["priority"]}</span><br>
-            <small>{e["sender"]}</small>
-            <p>{e["summary"]}</p>
-        </div>'''
+    """分類済みメールをHTMLに書き出す"""
 
-    def format_evidence_date(date_str_iso):
-        """YYYY-MM-DD を YYYY年M月D日 に変換"""
-        try:
-            dt = datetime.strptime(date_str_iso, '%Y-%m-%d')
-            return dt.strftime('%Y年%m月%d日').replace('年0', '年').replace('月0', '月')
-        except:
-            return date_str_iso
-
-    # ホットニュースセクション
-    hot_news_html = ""
-    for n in data.get("news", []):
-        if n.get("is_hot"):
-            summary_points = "".join([f'<li>{p}</li>' for p in n.get("summary", [])])
-            link_html = f'<a href="{n["url"]}" target="_blank">{n["title"]}</a>' if n.get("url") else n["title"]
-            display_date = format_evidence_date(n.get("email_date", ""))
-            evidence_html = f'<div style="font-size: 0.8rem; color: #92400e; margin-bottom: 4px; opacity: 0.8;">📧 {display_date}付・「{n.get("email_subject")}」より</div>'
-            
-            hot_news_html += f'''
-            <div class="hot-news">
-                <div style="margin-bottom: 8px;">🔥 【{n["source"]}】 <strong>{link_html}</strong></div>
-                {evidence_html}
-                <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; font-weight: normal; color: #92400e;">
-                    {summary_points}
-                </ul>
-            </div>'''
-
-    # 通常ニュース一覧
-    news_list_html = ""
-    for n in data.get("news", []):
-        if not n.get("is_hot"):
-            summary_points = "".join([f'<li>{p}</li>' for p in n.get("summary", [])])
-            title_html = f'<a href="{n["url"]}" target="_blank" style="font-weight: bold; font-size: 1.1rem; text-decoration: none; color: #007bff;">{n["title"]}</a>' if n.get("url") else f'<span style="font-weight: bold; font-size: 1.1rem; color: #333;">{n["title"]}</span>'
-            display_date = format_evidence_date(n.get("email_date", ""))
-            evidence_html = f'<div style="font-size: 0.8rem; color: #666; margin-bottom: 4px;">📧 {display_date}付・「{n.get("email_subject")}」より</div>'
-            
-            news_list_html += f'''
+    def build_email_items(email_list):
+        """メールリストをHTMLに変換する"""
+        html = ""
+        for e in email_list:
+            gmail_url = f"https://mail.google.com/mail/u/0/#inbox/{e.get('message_id', '')}"
+            subject_html = f'<a href="{gmail_url}" target="_blank" style="font-weight:bold; font-size:1.05rem; text-decoration:none; color:#1a73e8;">{e["subject"]}</a>'
+            sender_html = f'<small style="color:#666;">{e["sender"]} | {e["date"]}</small>'
+            summary_points = "".join([f"<li>{p}</li>" for p in e.get("summary", [])])
+            html += f'''
             <div class="email-item">
-                <span class="source-badge">[{n["source"]}]</span> 
-                {title_html}
-                {evidence_html}
-                <ul style="margin-top: 8px; padding-left: 20px; font-size: 0.9rem; color: #444;">
+                {subject_html}<br>
+                {sender_html}
+                <ul style="margin-top:8px; padding-left:20px; font-size:0.9rem; color:#444;">
                     {summary_points}
                 </ul>
             </div>'''
+        return html if html else '<p style="color:#999; font-size:0.9rem;">該当メールなし</p>'
 
-    template = f'''
-    <!DOCTYPE html>
-    <html lang="ja">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Daily Briefing - {date_str}</title>
-        <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
-            .section {{ background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; }}
-            h2 {{ border-left: 4px solid #007bff; padding-left: 12px; color: #007bff; font-size: 1.25rem; margin-top: 0; }}
-            .email-item {{ border-bottom: 1px solid #eee; padding: 16px 0; }}
-            .email-item:last-child {{ border-bottom: none; }}
-            .tag {{ display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-left: 8px; vertical-align: middle; }}
-            .tag-high {{ background-color: #fee2e2; color: #dc2626; }}
-            .tag-medium {{ background-color: #fef3c7; color: #d97706; }}
-            .tag-low {{ background-color: #dcfce7; color: #16a34a; }}
-            .source-badge {{ background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }}
-            .hot-news {{ background-color: #fffbeb; border: 1px solid #fde68a; padding: 16px; border-radius: 8px; color: #92400e; margin-bottom: 12px; }}
-            .hot-news a {{ color: #92400e; text-decoration: underline; }}
-        </style>
-    </head>
-    <body>
-        <h1>📅 Briefing: {date_str}</h1>
-        
-        <div class="section">
+    important_html = build_email_items(data.get("important", []))
+    news_html = build_email_items(data.get("news", []))
+    other_html = build_email_items(data.get("other", []))
+
+    important_count = len(data.get("important", []))
+    news_count = len(data.get("news", []))
+    other_count = len(data.get("other", []))
+    total_count = important_count + news_count + other_count
+
+    template = f'''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Briefing - {date_str}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }}
+        .header {{
+            background: #fff;
+            padding: 20px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 1.4rem;
+            color: #333;
+        }}
+        .badge {{
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }}
+        .section {{
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }}
+        .section-header {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+        }}
+        h2 {{
+            margin: 0;
+            font-size: 1.1rem;
+            color: #333;
+        }}
+        .count-badge {{
+            background: #f0f0f0;
+            color: #666;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }}
+        .important .section-header {{ border-bottom-color: #dc2626; }}
+        .important h2 {{ color: #dc2626; }}
+        .news .section-header {{ border-bottom-color: #1a73e8; }}
+        .news h2 {{ color: #1a73e8; }}
+        .other .section-header {{ border-bottom-color: #999; }}
+        .other h2 {{ color: #666; }}
+        .email-item {{
+            border-bottom: 1px solid #eee;
+            padding: 14px 0;
+        }}
+        .email-item:last-child {{ border-bottom: none; }}
+        .email-item a:hover {{ text-decoration: underline !important; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📅 {date_str} の受信メール</h1>
+        <span class="badge">合計 {total_count} 件</span>
+    </div>
+
+    <div class="section important">
+        <div class="section-header">
             <h2>🚨 重要メール</h2>
-            {important_html}
+            <span class="count-badge">{important_count} 件</span>
         </div>
+        {important_html}
+    </div>
 
-        <div class="section">
-            <h2>🔥 ホットニュース</h2>
-            {hot_news_html}
+    <div class="section news">
+        <div class="section-header">
+            <h2>📰 ニュース・メルマガ</h2>
+            <span class="count-badge">{news_count} 件</span>
         </div>
+        {news_html}
+    </div>
 
-        <div class="section">
-            <h2>📰 ニュース要約一覧</h2>
-            {news_list_html}
+    <div class="section other">
+        <div class="section-header">
+            <h2>📋 その他</h2>
+            <span class="count-badge">{other_count} 件</span>
         </div>
-    </body>
-    </html>
-    '''
+        {other_html}
+    </div>
+</body>
+</html>'''
+
     file_path = os.path.join(BRIEFINGS_DIR, f"{date_str}.html")
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(template)
@@ -310,8 +399,12 @@ if __name__ == "__main__":
             yesterday_str = yesterday_jst.strftime('%Y-%m-%d')
             generate_html(yesterday_str, summary_data)
             update_index()
-            print(f"Success: Briefing for {yesterday_str} generated with hot news summaries.")
+            important_count = len(summary_data.get("important", []))
+            news_count = len(summary_data.get("news", []))
+            other_count = len(summary_data.get("other", []))
+            print(f"Success: {yesterday_str} / 重要:{important_count}件 ニュース:{news_count}件 その他:{other_count}件")
         else:
             print("No emails found for yesterday.")
     except Exception as e:
         print(f"Error occurred: {e}")
+        raise
