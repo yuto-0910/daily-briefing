@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from google import genai
 from google.genai import types
@@ -22,6 +23,26 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Gmail APIの利用範囲（読み取り専用）を設定
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+
+def generate_with_backoff(client, model, contents, config, max_retries=5):
+    """Exponential Backoffで503/429エラー時に自動リトライする"""
+    for attempt in range(max_retries):
+        try:
+            return client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config
+            )
+        except Exception as e:
+            if any(code in str(e) for code in ['503', '429', 'UNAVAILABLE', 'RESOURCE_EXHAUSTED']):
+                if attempt < max_retries - 1:
+                    wait = (2 ** attempt) + 1
+                    print(f"APIエラー({e})。{wait}秒後にリトライ ({attempt + 1}/{max_retries})")
+                    time.sleep(wait)
+                else:
+                    raise Exception(f"最大リトライ回数({max_retries}回)超過: {e}")
+            else:
+                raise e
 
 def get_gmail_service():
     """Gmail APIに接続するための認証処理を行います"""
@@ -178,7 +199,8 @@ def summarize_emails(emails):
 }}
 """
 
-    response = client.models.generate_content(
+    response = generate_with_backoff(
+        client=client,
         model="gemini-2.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
